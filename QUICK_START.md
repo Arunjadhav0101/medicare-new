@@ -83,5 +83,19 @@ docker-compose down
 ```
 
 ---
-
+```bash
+# .env
+-frontend
+# REACT_APP_API_URL=http://localhost:5000/api
+# REACT_APP_APP_NAME=MediCare
+# API_KEY=AIzaSyB5bLqoUZ2kwUdEpS33-FQ-RNVo2HUeDNI
+# api=AIzaSyB5bLqoUZ2kwUdEpS33-FQ-RNVo2HUeDNI
+-backend
+# DB_HOST=localhost
+# DB_USER=root
+# DB_PASSWORD=root_password
+# DB_NAME=medicare
+# PORT=5000
+# JWT_SECRET=super_secret_key
+```
 **For complete documentation, see README_SETUP.md**
