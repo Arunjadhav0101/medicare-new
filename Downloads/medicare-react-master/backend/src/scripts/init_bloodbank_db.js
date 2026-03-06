@@ -2,26 +2,26 @@ const mysql = require('mysql2/promise');
 require('dotenv').config();
 
 const dbConfig = {
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    multipleStatements: true
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  multipleStatements: true
 };
 
 console.log('DB Config:', {
-    host: dbConfig.host,
-    user: dbConfig.user,
-    database: dbConfig.database
+  host: dbConfig.host,
+  user: dbConfig.user,
+  database: dbConfig.database
 });
 
 async function initBloodBankDB() {
-    let connection;
-    try {
-        connection = await mysql.createConnection(dbConfig);
-        console.log('Connected to database.');
+  let connection;
+  try {
+    connection = await mysql.createConnection(dbConfig);
+    console.log('Connected to database.');
 
-        const schema = `
+    const schema = `
       CREATE TABLE IF NOT EXISTS blood_inventory (
         id INT AUTO_INCREMENT PRIMARY KEY,
         blood_group VARCHAR(5) NOT NULL,
@@ -45,6 +45,7 @@ async function initBloodBankDB() {
 
       CREATE TABLE IF NOT EXISTS blood_requests (
         id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT DEFAULT NULL,
         patient_name VARCHAR(255) NOT NULL,
         blood_group VARCHAR(5) NOT NULL,
         units_needed INT NOT NULL,
@@ -61,14 +62,14 @@ async function initBloodBankDB() {
       ('AB+', 15), ('AB-', 6), ('O+', 30), ('O-', 10);
     `;
 
-        await connection.query(schema);
-        console.log('Blood Bank tables created and seeded successfully.');
+    await connection.query(schema);
+    console.log('Blood Bank tables created and seeded successfully.');
 
-    } catch (error) {
-        console.error('Error initializing Blood Bank database:', error);
-    } finally {
-        if (connection) await connection.end();
-    }
+  } catch (error) {
+    console.error('Error initializing Blood Bank database:', error);
+  } finally {
+    if (connection) await connection.end();
+  }
 }
 
 initBloodBankDB();

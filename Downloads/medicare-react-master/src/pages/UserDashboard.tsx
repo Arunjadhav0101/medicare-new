@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getUserRequests } from '../services/bloodbankService';
+import { medicineAPI, orderAPI } from '../services/api';
 import './UserDashboard.css';
 
 interface Order {
-  id: string;
+  id: string | number;
   items: string;
   amount: number;
   status: string;
@@ -22,25 +23,60 @@ const UserDashboard: React.FC = () => {
     email: user?.email || ''
   };
 
-  const [orders, setOrders] = useState<Order[]>([
-    { id: 'ORD001', items: 'Paracetamol, Bandage', amount: 80, status: 'Delivered', date: '2026-02-08' },
-    { id: 'ORD002', items: 'Thermometer', amount: 150, status: 'Processing', date: '2026-02-10' }
-  ]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [medicines, setMedicines] = useState<any[]>([]);
   const [bloodRequests, setBloodRequests] = useState<any[]>([]);
 
-  useEffect(() => {
+  const fetchData = async () => {
     if (user) {
-      const fetchBloodRequests = async () => {
-        try {
-          const data = await getUserRequests(user.id);
-          setBloodRequests(data);
-        } catch (error) {
-          console.error("Error fetching blood requests:", error);
-        }
-      };
-      fetchBloodRequests();
+      try {
+        const [medicinesRes, ordersRes, requestsRes] = await Promise.all([
+          medicineAPI.getAll(),
+          orderAPI.getUserOrders(user.id),
+          getUserRequests(user.id)
+        ]);
+        setMedicines(medicinesRes.data);
+
+        const formattedOrders = ordersRes.data.map((o: any) => ({
+          id: o.id,
+          items: 'Medicine Order',
+          amount: o.total_amount || 0,
+          status: o.status,
+          date: new Date(o.created_at || Date.now()).toLocaleDateString()
+        }));
+        setOrders(formattedOrders);
+        setBloodRequests(requestsRes);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
     }
+  };
+
+  useEffect(() => {
+    fetchData();
   }, [user]);
+
+  const handleBookMedicine = async (medicine: any) => {
+    if (!user) {
+      alert("Please login first!");
+      return;
+    }
+    if (window.confirm(`Do you want to book ${medicine.name} for ₹${medicine.price}?`)) {
+      try {
+        await orderAPI.createOrder({
+          userId: user.id,
+          items: [{ medicineId: medicine.id, quantity: 1, price: medicine.price }],
+          totalAmount: medicine.price
+        });
+        alert('Medicine booked successfully! Waiting for admin approval.');
+        fetchData();
+        setActiveTab('orders'); // go to orders tab to see status!
+      } catch (e) {
+        console.error("Booking error", e);
+        alert('Failed to book medicine');
+      }
+    }
+  };
 
   return (
     <div className="user-dashboard">
@@ -87,7 +123,7 @@ const UserDashboard: React.FC = () => {
               </div>
               <div className="stat-box">
                 <h3>Total Spent</h3>
-                <p className="stat-value">₹{orders.reduce((sum, o) => sum + o.amount, 0)}</p>
+                <p className="stat-value">₹{orders.reduce((sum, o) => sum + Number(o.amount), 0).toFixed(2)}</p>
               </div>
             </div>
             <div className="quick-actions">
@@ -112,48 +148,15 @@ const UserDashboard: React.FC = () => {
             <h1>Book Medicines</h1>
             <p className="section-info">Browse and book medicines. Your orders will be reviewed by admin.</p>
             <div className="medicines-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '20px', marginTop: '20px' }}>
-              <div className="medicine-card" style={{ border: '1px solid #ddd', padding: '15px', borderRadius: '8px' }}>
-                <h3>Paracetamol</h3>
-                <p><strong>Price:</strong> ₹25.00</p>
-                <p><strong>Category:</strong> Pain Relief</p>
-                <p><strong>Description:</strong> Pain relief and fever reducer</p>
-                <button className="btn btn-primary" style={{ marginTop: '10px', width: '100%' }}>Book Now</button>
-              </div>
-              <div className="medicine-card" style={{ border: '1px solid #ddd', padding: '15px', borderRadius: '8px' }}>
-                <h3>Amoxicillin</h3>
-                <p><strong>Price:</strong> ₹120.00</p>
-                <p><strong>Category:</strong> Antibiotics</p>
-                <p><strong>Description:</strong> Antibiotic for bacterial infections</p>
-                <button className="btn btn-primary" style={{ marginTop: '10px', width: '100%' }}>Book Now</button>
-              </div>
-              <div className="medicine-card" style={{ border: '1px solid #ddd', padding: '15px', borderRadius: '8px' }}>
-                <h3>Cetirizine</h3>
-                <p><strong>Price:</strong> ₹45.00</p>
-                <p><strong>Category:</strong> Allergy</p>
-                <p><strong>Description:</strong> Antihistamine for allergies</p>
-                <button className="btn btn-primary" style={{ marginTop: '10px', width: '100%' }}>Book Now</button>
-              </div>
-              <div className="medicine-card" style={{ border: '1px solid #ddd', padding: '15px', borderRadius: '8px' }}>
-                <h3>Omeprazole</h3>
-                <p><strong>Price:</strong> ₹80.00</p>
-                <p><strong>Category:</strong> Digestive</p>
-                <p><strong>Description:</strong> Acid reflux and heartburn relief</p>
-                <button className="btn btn-primary" style={{ marginTop: '10px', width: '100%' }}>Book Now</button>
-              </div>
-              <div className="medicine-card" style={{ border: '1px solid #ddd', padding: '15px', borderRadius: '8px' }}>
-                <h3>Aspirin</h3>
-                <p><strong>Price:</strong> ₹30.00</p>
-                <p><strong>Category:</strong> Pain Relief</p>
-                <p><strong>Description:</strong> Pain relief and blood thinner</p>
-                <button className="btn btn-primary" style={{ marginTop: '10px', width: '100%' }}>Book Now</button>
-              </div>
-              <div className="medicine-card" style={{ border: '1px solid #ddd', padding: '15px', borderRadius: '8px' }}>
-                <h3>Metformin</h3>
-                <p><strong>Price:</strong> ₹150.00</p>
-                <p><strong>Category:</strong> Diabetes</p>
-                <p><strong>Description:</strong> Diabetes medication</p>
-                <button className="btn btn-primary" style={{ marginTop: '10px', width: '100%' }}>Book Now</button>
-              </div>
+              {medicines.map(med => (
+                <div key={med.id} className="medicine-card" style={{ border: '1px solid #ddd', padding: '15px', borderRadius: '8px' }}>
+                  <h3>{med.name}</h3>
+                  <p><strong>Price:</strong> ₹{med.price}</p>
+                  <p><strong>Category:</strong> {med.category}</p>
+                  <p><strong>Description:</strong> {med.description}</p>
+                  <button onClick={() => handleBookMedicine(med)} className="btn btn-primary" style={{ marginTop: '10px', width: '100%' }}>Book Now</button>
+                </div>
+              ))}
             </div>
           </div>
         )}

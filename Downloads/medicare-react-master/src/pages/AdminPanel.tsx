@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { userAPI, medicineAPI, orderAPI } from '../services/api';
-import { getDonors, getRequests, updateDonorStatus, updateRequestStatus } from '../services/bloodbankService';
+import { getDonors, getRequests, updateDonorStatus, updateRequestStatus, getBloodInventory } from '../services/bloodbankService';
 import { User, Medicine } from '../types';
 import './AdminPanel.css';
 
@@ -65,8 +65,8 @@ const AdminPanel: React.FC = () => {
       setMedicines(medicinesRes.data);
 
       const orders = ordersRes.data;
-      const revenue = orders.reduce((sum, order) => sum + (Number(order.total) || 0), 0);
-      const pending = orders.filter(o => o.status === 'pending').length;
+      const revenue = orders.reduce((sum: any, order: any) => sum + (Number(order.total_amount) || 0), 0);
+      const pending = orders.filter((o: any) => o.status === 'Pending').length;
 
       setStats({
         totalUsers: usersRes.data.length,
@@ -76,12 +76,12 @@ const AdminPanel: React.FC = () => {
       });
 
       // Format recent orders for display
-      const formattedRecent = orders.slice(0, 5).map(order => ({
+      const formattedRecent = orders.map((order: any) => ({
         id: order.id,
-        user: order.userId, // In a real app we'd map this to a name
-        amount: order.total,
+        user: order.user_name || `User ${order.user_id}`,
+        amount: order.total_amount,
         status: order.status,
-        date: new Date(order.createdAt || Date.now()).toLocaleDateString()
+        date: new Date(order.created_at || Date.now()).toLocaleDateString()
       }));
       setRecentOrders(formattedRecent);
 
@@ -102,6 +102,7 @@ const AdminPanel: React.FC = () => {
   // Load blood donors and requests from API
   const [bloodDonors, setBloodDonors] = useState<BloodDonor[]>([]);
   const [bloodRequests, setBloodRequests] = useState<BloodRequest[]>([]);
+  const [bloodInventory, setBloodInventory] = useState<any[]>([]);
 
   useEffect(() => {
     fetchBloodBankData();
@@ -111,10 +112,7 @@ const AdminPanel: React.FC = () => {
     try {
       const donors = await getDonors();
       const requests = await getRequests();
-
-      // Map API data to component state shape if necessary
-      // Assuming API returns data matching interfaces or close enough
-      // We might need to map 'blood_group' to 'bloodGroup', etc.
+      const inventory = await getBloodInventory();
 
       const formattedDonors = donors.map((d: any) => ({
         id: d.id,
@@ -142,6 +140,7 @@ const AdminPanel: React.FC = () => {
 
       setBloodDonors(formattedDonors);
       setBloodRequests(formattedRequests);
+      setBloodInventory(inventory);
     } catch (error) {
       console.error("Error fetching blood bank data:", error);
     }
@@ -203,6 +202,16 @@ const AdminPanel: React.FC = () => {
     } catch (error) {
       console.error("Error rejecting request:", error);
       alert("Failed to reject request");
+    }
+  };
+
+  const handleUpdateOrderStatus = async (id: number, status: string) => {
+    try {
+      await orderAPI.updateOrderStatus(id, status);
+      setRecentOrders(recentOrders.map(o => o.id === id ? { ...o, status } : o));
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      alert("Failed to update order status");
     }
   };
 
@@ -366,7 +375,7 @@ const AdminPanel: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {recentOrders.map(order => (
+                  {recentOrders.slice(0, 5).map(order => (
                     <tr key={order.id}>
                       <td>{order.id}</td>
                       <td>{order.user}</td>
@@ -498,8 +507,15 @@ const AdminPanel: React.FC = () => {
                     <td><span className={`status ${order.status.toLowerCase()}`}>{order.status}</span></td>
                     <td>{order.date}</td>
                     <td>
-                      <button className="btn-small">View</button>
-                      <button className="btn-small">Update</button>
+                      {order.status === 'Pending' && (
+                        <>
+                          <button className="btn-small" onClick={() => handleUpdateOrderStatus(order.id, 'Approved')}>Approve</button>
+                          <button className="btn-small btn-danger" onClick={() => handleUpdateOrderStatus(order.id, 'Rejected')}>Reject</button>
+                        </>
+                      )}
+                      {(order.status === 'Approved' || order.status === 'Processing') && (
+                        <button className="btn-small btn-primary" onClick={() => handleUpdateOrderStatus(order.id, 'Completed')}>Mark Completed</button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -581,22 +597,14 @@ const AdminPanel: React.FC = () => {
           <div className="blood-section">
             <h1>Blood Bank Management</h1>
             <div className="blood-stats">
-              <div className="blood-card">
-                <h3>O+</h3>
-                <p>45 Units</p>
-              </div>
-              <div className="blood-card">
-                <h3>A+</h3>
-                <p>32 Units</p>
-              </div>
-              <div className="blood-card">
-                <h3>B+</h3>
-                <p>28 Units</p>
-              </div>
-              <div className="blood-card">
-                <h3>AB+</h3>
-                <p>15 Units</p>
-              </div>
+              {bloodInventory.length > 0 ? bloodInventory.map((item: any) => (
+                <div key={item.blood_group} className="blood-card">
+                  <h3>{item.blood_group}</h3>
+                  <p>{item.units} Units</p>
+                </div>
+              )) : (
+                <p>Loading inventory...</p>
+              )}
             </div>
 
             <h2>Blood Donor Registrations</h2>

@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS blood_donors (
 -- Blood Requests table
 CREATE TABLE IF NOT EXISTS blood_requests (
   id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT DEFAULT NULL,
   patient_name VARCHAR(255) NOT NULL,
   blood_group VARCHAR(5) NOT NULL,
   units_needed INT NOT NULL,

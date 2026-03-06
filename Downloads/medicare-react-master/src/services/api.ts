@@ -56,6 +56,7 @@ export const cartAPI = {
 // Order API
 export const orderAPI = {
   getOrders: () => api.get<Order[]>('/orders'),
+  getUserOrders: (userId: number | string) => api.get<Order[]>(`/orders/user/${userId}`),
   getOrderById: (id: number) => api.get<Order>(`/orders/${id}`),
   createOrder: (orderData: any) => api.post<Order>('/orders', orderData),
   updateOrderStatus: (id: number, status: string) =>
