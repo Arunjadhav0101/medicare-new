@@ -20,7 +20,6 @@ spec:
     spec:
       containers:
       - name: mysql
-
         image: mysql:8
 
         env:
@@ -30,12 +29,23 @@ spec:
               name: mysql-secret
               key: MYSQL_ROOT_PASSWORD
 
+        - name: MYSQL_DATABASE
+          value: medicare
+
         ports:
         - containerPort: 3306
 
         volumeMounts:
-        - mountPath: /var/lib/mysql
-          name: mysql-storage
+        - name: mysql-storage
+          mountPath: /var/lib/mysql
+
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
 
       volumes:
       - name: mysql-storage

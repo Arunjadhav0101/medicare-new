@@ -21,7 +21,7 @@ spec:
       containers:
       - name: frontend
 
-        image: arunjadhav16/medicare-frontend:v2
+        image: arunjadhav16/medicare-frontend:v1
 
         ports:
         - containerPort: 3000
